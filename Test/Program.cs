@@ -1,84 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Drawing;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using static Test.ExtensionMethods;
+using System.Xml.Linq;
 
 namespace Test
 {
     class Program
     {
         public static Random randomizer = new Random();
+        static int n = 0;
 
         static void Main()
-       {
-            var humanQuery = from h in Human.CreateHumans(100)
-                             let favcolor = h.favoriteColor
-                             orderby h.age
-                             group h by favcolor into grp
-                             orderby grp.Key
-                             select grp;
+        {
 
-           List<Male> males = Male.CreateMale(100).ToList();
-           List<Female> females = Female.CreateFemale(100).ToList();
+            // Human Factory Methods...
+            List<Male> males = Male.CreateMale(100).ToList();
+            List<Female> females = Female.CreateFemale(100).ToList();
+            List<Human> humans = Human.CreateHumans(1000).ToList();
 
-           var joinQuery = (from m in males
-                             select m.name)
-                             .Concat(from f in females
-                             select f.name);
+            #region LINQ Queries
 
+            // QUERY & METHOD SYNTAX (i.e. .Concat(), .Select(), etc.) - Inner Join - Elements from two separate lists (males & females) 
+            // and joining them together into one list
+            var joinQuery = (from m in males
+                             select m.age).Concat(
+                             from f in females select f.age);
+
+            // METHOD SYNTAX - Same Query as above but using full method syntax.
+            var joinQuery2 = males.Select(m => m.age).Concat(females.Select(f => f.age));
+            
+            // QUERY SYNTAX (i.e. where, orderby, join, etc.) - Join Query. Comparing elements from two lists and returning elements from one
+            // list that match a certain criteria. You can do Left Outer Joins or Right Outer Joins with this by switching the 'equals' property.
             var joinSQL = from h in males
                           where h.homeTown == "Chicago, IL"
                           join f in females on h.homeTown equals f.homeTown
                           select f.homeTown;
 
-            List<Human> bigHumanList = Human.CreateHumans(1000).ToList();
-            bigHumanList = bigHumanList.ConvertToMale().ChangeName("Ketan");
+            // QUERY SYNTAX - Filtering, Sorting, Grouping Element, then Sorting by Group.Key
+            var humanGroupQuery = from h in Human.CreateHumans(2500)
+                             where h.name.StartsWith("K")
+                             let hometown = h.homeTown
+                             orderby h.name, h.age descending
+                             group h by hometown into grp
+                             orderby grp.Key
+                             select grp;
 
-            foreach (var h in bigHumanList)
-            {
-                Console.WriteLine($"{h.name} is a {h.ReturnGender()}");
-            }
+            // QUERY SYNTAX - Returning an customized anonymous object with whatever variables you like... new {....}
+            var newMaleQuery = from h in Human.CreateHumans(2500)
+                               select new { name = h.name, age = h.age };
 
-            //Human.PrintHumanGrouping<string, Human>(humanQuery);
+            // How to use LINQ to create an XML Document.
+            var humanToXML = new XElement("Root", new XAttribute("Manufacturer", "Gadiel"),
+                                                  new XAttribute("Artist", "Gadiel"),
+                                                  new XAttribute("SongWriter", "Gadiel"),
+                                                  from h in Human.CreateHumans(25)
+                                                  select new XElement("Human", new XElement("Name", h.name),
+                                                  new XElement("Hometown", h.homeTown),
+                                                  new XElement("FavoriteColor", h.favoriteColor),
+                                                  new XElement("Age", h.age),
+                                                  new XElement("Height", h.ReturnHeight()),
+                                                  new XElement("Gender", h.ReturnGender()))//end "Human"
+                            ); // end "Root"
+
+            Console.WriteLine(humanToXML);
+
+            // Extenstion Method example see ExtentionMethods.cs in Solution Explorer
+            humans = humans.ConvertToMale().ChangeName("Ketan");
+
+            //Print IOrderedEnumerable<IGrouping<string, Human>>
+            Human.PrintHumanGrouping<string, Human>(humanGroupQuery);
+
             Console.ReadKey();
-        }
-
-        static void Delayed(int[] numbers)
-        {
-            int i = 0;
-            var q =
-            from n in numbers
-            select i++;
-
-            foreach (var v in q)
-            {
-                Console.WriteLine("v = {0}, i = {1}", v, i);
-            }
-        }
-
-        static void Immediate(int[] numbers)
-        {
-            int i = 0;
-            var q = (
-            from n in numbers select ++i)
-            .ToList();
-
-            foreach (var v in q)
-            {
-                Console.WriteLine("v = {0}, i = {1}", v, i);
-            }
-        }
-
-        static void ObjValModify(Human o)
-        {
-            FieldInfo carInfo = typeof(Human).GetField("name");
-            carInfo.SetValue(o, "John");
-            Console.WriteLine(o.name);
+            #endregion
         }
     }
 }
