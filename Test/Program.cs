@@ -7,9 +7,6 @@ namespace Test
 {
     class Program
     {
-        public static Random randomizer = new Random();
-        static int n = 0;
-
         static void Main()
         {
 
